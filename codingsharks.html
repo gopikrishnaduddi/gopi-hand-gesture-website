@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gopi Krishna — Gesture FX v3</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Space+Grotesk:wght@400;600;700&display=swap');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: rgba(0, 0, 0, 0.88);
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      font-family: 'Space Grotesk', sans-serif;
+      cursor: none;
+    }
+
+    #cursor {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #00f0ff, #0088ff);
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 10px #00f0ff, 0 0 25px #0088ff, 0 0 60px rgba(0, 255, 255, 0.5);
+    }
+
+    #cursor-ring {
+      position: fixed;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 2px dashed rgba(0, 255, 255, 0.5);
+      pointer-events: none;
+      z-index: 9998;
+      transform: translate(-50%, -50%);
+      animation: rotateOrb 4s linear infinite;
+    }
+
+    @keyframes rotateOrb {
+      from {
+        transform: translate(-50%, -50%) rotate(0deg);
+      }
+
+      to {
+        transform: translate(-50%, -50%) rotate(360deg);
+      }
+    }
+
+    #webcam {
+      position: fixed;
+      top: -9999px;
+      left: -9999px;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* ── Dark transparent overlay on canvas ── */
+    #dark-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.62);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    #vignette {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(ellipse at center,
+          rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.45) 65%, rgba(0, 0, 0, 0.85) 100%);
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    #main {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 3;
+    }
+
+    /* ── Splash canvas (flowers + fire on top of everything) ── */
+    #splash-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 8000;
+      pointer-events: none;
+    }
+
+    #ui-layer {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    #logo {
+      position: absolute;
+      top: 22px;
+      left: 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      opacity: 0;
+      animation: fadeIn 1s 2s forwards;
+    }
+
+    #logo-emoji {
+      font-size: 28px;
+      filter: drop-shadow(0 0 8px rgba(255, 107, 53, 0.8));
+    }
+
+    #logo-text {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: 2.5px;
+      background: linear-gradient(90deg, #FF6B35, #FF9500);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-transform: uppercase;
+      filter: drop-shadow(0 0 12px rgba(255, 107, 53, 0.5));
+    }
+
+    #badge {
+      position: absolute;
+      top: 22px;
+      right: 24px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 107, 53, 0.5);
+      backdrop-filter: blur(8px);
+      color: #FF9500;
+      font-size: 10px;
+      letter-spacing: 2px;
+      padding: 6px 14px;
+      border-radius: 3px;
+      font-weight: 600;
+      text-transform: uppercase;
+      opacity: 0;
+      animation: fadeIn 1s 2.2s forwards;
+      box-shadow: 0 0 20px rgba(255, 107, 53, 0.2);
+    }
+
+    #mode-pill {
+      position: absolute;
+      top: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 107, 53, 0.2);
+      padding: 5px 18px;
+      border-radius: 20px;
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: rgba(255, 149, 0, 0.8);
+      text-transform: uppercase;
+      font-family: 'Space Grotesk', monospace;
+      opacity: 0;
+      animation: fadeIn 1s 2.5s forwards;
+    }
+
+    /* ── FIST INDICATOR ── */
+    #fist-indicator {
+      position: absolute;
+      top: 55px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 50, 0, 0.15);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 100, 0, 0.4);
+      padding: 6px 22px;
+      border-radius: 20px;
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: rgba(255, 180, 50, 0.9);
+      text-transform: uppercase;
+      font-family: 'Space Grotesk', monospace;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      z-index: 20;
+    }
+
+    #fist-indicator.show {
+      opacity: 1;
+    }
+
+    #hud {
+      position: absolute;
+      bottom: 110px;
+      left: 24px;
+      color: rgba(255, 107, 53, 0.5);
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      line-height: 2.2;
+      text-transform: uppercase;
+      opacity: 0;
+      animation: fadeIn 1s 3s forwards;
+    }
+
+    #hud span {
+      color: rgba(255, 149, 0, 0.85);
+    }
+
+    #stats-strip {
+      position: absolute;
+      bottom: 110px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: flex-end;
+      opacity: 0;
+      animation: fadeIn 1s 3s forwards;
+    }
+
+    .stat {
+      text-align: right;
+    }
+
+    .stat-num {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 20px;
+      font-weight: 900;
+      background: linear-gradient(135deg, #FF6B35, #FF9500);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 0 8px rgba(255, 107, 53, 0.6));
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: rgba(255, 255, 255, 0.4);
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    #word-switcher {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      pointer-events: all;
+      opacity: 0;
+      animation: fadeIn 0.8s 3.5s forwards;
+    }
+
+    .word-btn {
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 107, 53, 0.3);
+      color: rgba(255, 149, 0, 0.7);
+      padding: 7px 14px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 10px;
+      letter-spacing: 2px;
+      cursor: pointer;
+      border-radius: 3px;
+      transition: all 0.25s;
+      text-transform: uppercase;
+    }
+
+    .word-btn:hover,
+    .word-btn.active {
+      background: rgba(255, 107, 53, 0.2);
+      border-color: rgba(255, 107, 53, 0.9);
+      color: #FF9500;
+      box-shadow: 0 0 16px rgba(255, 107, 53, 0.3);
+    }
+
+    #tagline {
+      position: absolute;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      white-space: nowrap;
+      opacity: 0;
+      animation: fadeIn 1s 4s forwards;
+    }
+
+    #tagline-main {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(9px, 1.5vw, 14px);
+      letter-spacing: 5px;
+      color: rgba(255, 255, 255, 0.2);
+      text-transform: uppercase;
+    }
+
+    #tagline-url {
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: rgba(255, 107, 53, 0.5);
+      margin-top: 4px;
+      text-transform: uppercase;
+    }
+
+    #status {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      transition: opacity 1s;
+    }
+
+    #status-text {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 14px;
+      letter-spacing: 4px;
+      color: rgba(255, 107, 53, 0.8);
+      text-transform: uppercase;
+      animation: pulse 2s ease-in-out infinite;
+      text-shadow: 0 0 20px rgba(255, 107, 53, 0.5);
+    }
+
+    #status-sub {
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: rgba(255, 255, 255, 0.3);
+      margin-top: 10px;
+      text-transform: uppercase;
+    }
+
+    #tip {
+      position: absolute;
+      top: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 107, 53, 0.25);
+      padding: 8px 20px;
+      border-radius: 4px;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      color: rgba(255, 200, 100, 0.75);
+      text-transform: uppercase;
+      opacity: 0;
+      transition: opacity 0.5s;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    /* ── DOM flame / smoke / spark ── */
+    .flame {
+      position: fixed;
+      width: 12px;
+      height: 20px;
+      pointer-events: none;
+      z-index: 9997;
+      border-radius: 50% 50% 50% 50%;
+      background: radial-gradient(circle at 50% 80%, #ffff66 0%, #ffcc00 30%, #ff6600 60%, #ff0000 100%);
+      filter: blur(1px);
+      opacity: 0.9;
+      animation: flameRise 0.5s ease-out forwards;
+    }
+
+    .smoke {
+      position: fixed;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9996;
+      background: radial-gradient(circle, rgba(200, 200, 200, 0.4), rgba(50, 50, 50, 0.05));
+      filter: blur(6px);
+      animation: smokeRise 1.2s ease-out forwards;
+    }
+
+    .spark {
+      position: fixed;
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9998;
+      background: #ffd700;
+      box-shadow: 0 0 6px #ffae00, 0 0 12px #ff6b00;
+      animation: sparkFly 0.6s linear forwards;
+    }
+
+    @keyframes sparkFly {
+      0% {
+        transform: translate(-50%, -50%);
+        opacity: 1;
+      }
+
+      100% {
+        transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy)));
+        opacity: 0;
+      }
+    }
+
+    @keyframes smokeRise {
+      0% {
+        transform: translate(-50%, -50%) scale(0.6);
+        opacity: 0.5;
+      }
+
+      100% {
+        transform: translate(-50%, -120%) scale(1.6);
+        opacity: 0;
+      }
+    }
+
+    @keyframes flameRise {
+      0% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+      }
+
+      100% {
+        transform: translate(-50%, -80%) scale(0.3);
+        opacity: 0;
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0
+      }
+
+      to {
+        opacity: 1
+      }
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 0.6
+      }
+
+      50% {
+        opacity: 1
+      }
+    }
+
+    /* ── SPLASH OVERLAY flash ── */
+    #splash-flash {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(ellipse at center, rgba(255, 220, 50, 0.18) 0%, rgba(255, 80, 0, 0.08) 60%, transparent 100%);
+      pointer-events: none;
+      z-index: 7999;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    #splash-flash.active {
+      opacity: 1;
+    }
+  </style>
+</head>
+
+<body>
+
+  <video id="webcam" autoplay muted playsinline webkit-playsinline
+    style="position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;"></video>
+
+  <!-- Dark transparent overlay on top of webcam feed -->
+  <div id="dark-overlay"></div>
+  <div id="vignette"></div>
+
+  <!-- Particle canvas -->
+  <canvas id="main"></canvas>
+
+  <!-- Splash canvas — renders flowers & fire burst -->
+  <canvas id="splash-canvas"></canvas>
+
+  <!-- Screen flash on fist -->
+  <div id="splash-flash"></div>
+
+  <!-- UI -->
+  <div id="ui-layer">
+    <div id="logo">
+      <span id="logo-emoji">🦈</span>
+      <div id="logo-text">Gopi Krishna</div>
+    </div>
+    <div id="badge">Software Developer</div>
+    <div id="mode-pill">⬡ GESTURE ACTIVE</div>
+    <div id="fist-indicator">✊ FIST DETECTED — SPLASH!</div>
+
+    <div id="status">
+      <div id="status-text">Initializing camera...</div>
+      <div id="status-sub">Allow access · Move your hands · Make a fist to splash!</div>
+    </div>
+
+    <div id="tip"></div>
+
+    <div id="hud">
+      PARTICLES: <span id="pc">0</span><br>
+      HANDS: <span id="hc">0</span><br>
+      RATING: <span>4.9 ★</span><br>
+      PLACED: <span>Accenture · CSI</span>
+    </div>
+
+    <div id="stats-strip">
+      <div class="stat">
+        <div class="stat-num">5,000+</div>
+        <div class="stat-label">Active Students</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">4.9★</div>
+        <div class="stat-label">Google Rating</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">+200%</div>
+        <div class="stat-label">Salary Growth</div>
+      </div>
+    </div>
+
+    <div id="tagline">
+      <div id="tagline-main">Dive Deep &nbsp;·&nbsp; Build Real &nbsp;·&nbsp; Get Hired</div>
+      <div id="tagline-url">Gopikrishna &nbsp;·&nbsp; Bengaluru</div>
+    </div>
+
+    <div id="word-switcher">
+      <button class="word-btn active" onclick="switchWord('KRISHNA',this)">Krishna</button>
+      <button class="word-btn" onclick="switchWord('CODE',this)">Code</button>
+      <button class="word-btn" onclick="switchWord('HIRED',this)">Hired</button>
+      <button class="word-btn" onclick="switchWord('BUILD',this)">Build</button>
+      <button class="word-btn" onclick="switchWord('BENGALURU',this)">Bengaluru</button>
+      <button class="word-btn" onclick="switchWord('AI',this)">AI</button>
+    </div>
+  </div>
+
+  <div id="cursor"></div>
+  <div id="cursor-ring"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+  <script>
+    // ══════════════════════════════════════════════════════════════════
+    //  CANVAS SETUP
+    // ══════════════════════════════════════════════════════════════════
+    const canvas = document.getElementById('main');
+    const ctx = canvas.getContext('2d');
+    const splashCanvas = document.getElementById('splash-canvas');
+    const sCtx = splashCanvas.getContext('2d');
+    const video = document.getElementById('webcam');
+    const statusDiv = document.getElementById('status');
+    const pcEl = document.getElementById('pc');
+    const hcEl = document.getElementById('hc');
+    const tipEl = document.getElementById('tip');
+    const fistEl = document.getElementById('fist-indicator');
+    const flashEl = document.getElementById('splash-flash');
+
+    let W, H, t = 0;
+    let particles = [], targetPoints = [], handLandmarks = [];
+    let currentWord = 'KRISHNA', transitioning = false;
+    let lastHandTime = 0;
+    let mpReady = false, mpHands = null;
+
+    // ── SPLASH STATE ────────────────────────────────────────────────
+    let splashParticles = [];
+    let splashActive = false;
+    let splashFading = false;
+    let splashTimer = null;
+    let lastFistTime = 0;
+    const FIST_COOLDOWN = 6000; // 6s between splashes
+
+    function resize() {
+      W = canvas.width = splashCanvas.width = window.innerWidth;
+      H = canvas.height = splashCanvas.height = window.innerHeight;
+      buildTargets(currentWord);
+      rebuildParticles();
+    }
+    window.addEventListener('resize', resize);
+
+    // ── TIPS ──────────────────────────────────────────────────────────
+    const tips = [
+      '✊ Make a FIST to splash flowers & fire!',
+      '🦈 Raise both hands to scatter particles',
+      '✋ Push slowly — particles resist your hands',
+      '🎯 Switch words using buttons below',
+      '🔴 Record screen for Instagram Reels',
+    ];
+    let tipIdx = 0;
+    function showTip(msg) {
+      tipEl.textContent = msg;
+      tipEl.style.opacity = '1';
+      setTimeout(() => tipEl.style.opacity = '0', 3500);
+    }
+    setTimeout(() => {
+      showTip(tips[0]);
+      setInterval(() => { tipIdx = (tipIdx + 1) % tips.length; showTip(tips[tipIdx]); }, 6000);
+    }, 4000);
+
+    // ── TEXT TARGETS ─────────────────────────────────────────────────
+    function buildTargets(word) {
+      const off = document.createElement('canvas');
+      off.width = W; off.height = H;
+      const oc = off.getContext('2d');
+      const fs = Math.min(W * 0.28, H * 0.38, 280);
+      oc.fillStyle = '#fff';
+      oc.font = `900 ${fs}px "Orbitron","Arial Black",monospace`;
+      oc.textAlign = 'center'; oc.textBaseline = 'middle';
+      oc.fillText(word, W / 2, H / 2);
+      const d = oc.getImageData(0, 0, W, H).data;
+      const pts = [];
+      const step = Math.max(5, Math.floor(W / 220));
+      for (let y = 0; y < H; y += step)
+        for (let x = 0; x < W; x += step)
+          if (d[(y * W + x) * 4 + 3] > 100) pts.push({ x, y });
+      for (let i = pts.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pts[i], pts[j]] = [pts[j], pts[i]];
+      }
+      targetPoints = pts;
+    }
+
+    // ── DOM FX (trail) ───────────────────────────────────────────────
+    function createFlame(x, y) {
+      const f = document.createElement('div'); f.className = 'flame';
+      f.style.left = (x + (Math.random() - 0.5) * 10) + 'px';
+      f.style.top = (y + (Math.random() - 0.5) * 10) + 'px';
+      document.body.appendChild(f);
+      setTimeout(() => f.remove(), 500);
+    }
+    function createSmoke(x, y) {
+      const s = document.createElement('div'); s.className = 'smoke';
+      s.style.left = x + 'px'; s.style.top = y + 'px';
+      document.body.appendChild(s);
+      setTimeout(() => s.remove(), 1200);
+    }
+    function createSpark(x, y) {
+      const sp = document.createElement('div'); sp.className = 'spark';
+      const dx = (Math.random() - 0.5) * 60 + 'px', dy = (Math.random() - 0.5) * 60 + 'px';
+      sp.style.setProperty('--dx', dx); sp.style.setProperty('--dy', dy);
+      sp.style.left = x + 'px'; sp.style.top = y + 'px';
+      document.body.appendChild(sp);
+      setTimeout(() => sp.remove(), 600);
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  FIST DETECTION
+    // ══════════════════════════════════════════════════════════════════
+    function isFist(hand) {
+      // Tips: 4,8,12,16,20 — MCP joints: 2,5,9,13,17
+      // A fist = all fingertips closer to wrist (lm[0]) than their MCP
+      const wrist = hand[0];
+      const tips = [4, 8, 12, 16, 20];
+      const mcps = [2, 5, 9, 13, 17];
+      let folded = 0;
+      for (let i = 0; i < tips.length; i++) {
+        const tip = hand[tips[i]], mcp = hand[mcps[i]];
+        if (!tip || !mcp) continue;
+        // dist from wrist
+        const dTip = Math.hypot(tip.x - wrist.x, tip.y - wrist.y);
+        const dMcp = Math.hypot(mcp.x - wrist.x, mcp.y - wrist.y);
+        if (dTip < dMcp * 1.05) folded++;  // tip behind or near MCP
+      }
+      return folded >= 4; // at least 4 fingers folded
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  SPLASH SYSTEM — Canvas-based realistic flower + fire burst
+    // ══════════════════════════════════════════════════════════════════
+
+    // FLOWER PETAL shapes (precomputed path points)
+    function petalPath(cx, cy, rx, ry, angle) {
+      // draws an ellipse rotated by angle
+      sCtx.save();
+      sCtx.translate(cx, cy);
+      sCtx.rotate(angle);
+      sCtx.beginPath();
+      sCtx.ellipse(0, -ry * 0.5, rx, ry, 0, 0, Math.PI * 2);
+      sCtx.restore();
+    }
+
+    // FLOWER COLORS
+    const FLOWER_COLORS = [
+      ['#FF6B9D', '#FF3D7F', '#FF8DC7'],   // pink rose
+      ['#FF9F43', '#FFA502', '#FFD32A'],   // marigold orange
+      ['#FF4757', '#C0392B', '#FF6B81'],   // red hibiscus
+      ['#A29BFE', '#6C5CE7', '#DFD8FD'],   // lavender
+      ['#FFF200', '#F9CA24', '#FFF9C4'],   // yellow sunflower
+      ['#00D2D3', '#54A0FF', '#ADFCFF'],   // teal/blue
+      ['#55EFC4', '#00B894', '#B2FFE5'],   // green blossom
+      ['#FD79A8', '#E84393', '#FFADD9'],   // deep pink
+    ];
+
+    // FIRE COLORS
+    const FIRE_COLORS = [
+      'rgba(255,255,120,1)',
+      'rgba(255,200,0,1)',
+      'rgba(255,140,0,0.95)',
+      'rgba(255,60,0,0.9)',
+      'rgba(220,30,0,0.8)',
+      'rgba(180,0,0,0.6)',
+    ];
+
+    class SplashParticle {
+      constructor(type) {
+        // burst from random edge or from center with high velocity
+        const fromEdge = Math.random() < 0.4;
+        if (fromEdge) {
+          const side = Math.floor(Math.random() * 4);
+          if (side === 0) { this.x = Math.random() * W; this.y = 0; }
+          else if (side === 1) { this.x = W; this.y = Math.random() * H; }
+          else if (side === 2) { this.x = Math.random() * W; this.y = H; }
+          else { this.x = 0; this.y = Math.random() * H; }
+        } else {
+          // burst from center or random point
+          this.x = W * 0.2 + Math.random() * W * 0.6;
+          this.y = H * 0.2 + Math.random() * H * 0.6;
+        }
+
+        this.type = type; // 'flower' | 'fire' | 'ember' | 'petal'
+
+        const angle = Math.random() * Math.PI * 2;
+        const speed = type === 'fire' ? 3 + Math.random() * 9 : 2 + Math.random() * 7;
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed;
+        this.gravity = type === 'fire' ? -0.12 : 0.08 + Math.random() * 0.06;
+        this.life = 1;
+        this.decay = 0.004 + Math.random() * 0.008;
+        this.size = type === 'fire' ? 18 + Math.random() * 32
+          : type === 'ember' ? 2 + Math.random() * 4
+            : 14 + Math.random() * 28;
+        this.rot = Math.random() * Math.PI * 2;
+        this.rotV = (Math.random() - 0.5) * 0.15;
+        this.petalCount = 5 + Math.floor(Math.random() * 4);
+        this.wobble = Math.random() * Math.PI * 2;
+        this.wobbleSpeed = 0.05 + Math.random() * 0.08;
+
+        if (type === 'flower' || type === 'petal') {
+          const c = FLOWER_COLORS[Math.floor(Math.random() * FLOWER_COLORS.length)];
+          this.colMain = c[0];
+          this.colDark = c[1];
+          this.colLight = c[2];
+        } else {
+          this.fireIdx = Math.floor(Math.random() * FIRE_COLORS.length);
+        }
+      }
+
+      update() {
+        this.wobble += this.wobbleSpeed;
+        this.vx += Math.cos(this.wobble) * 0.08;
+        this.vy += this.gravity;
+        this.vx *= 0.985; this.vy *= 0.985;
+        this.x += this.vx; this.y += this.vy;
+        this.rot += this.rotV;
+        this.life -= this.decay;
+        return this.life > 0;
+      }
+
+      draw() {
+        const a = Math.max(0, this.life);
+        sCtx.save();
+        sCtx.globalAlpha = a;
+        sCtx.translate(this.x, this.y);
+        sCtx.rotate(this.rot);
+
+        if (this.type === 'flower') {
+          this._drawFlower();
+        } else if (this.type === 'petal') {
+          this._drawPetal();
+        } else if (this.type === 'fire') {
+          this._drawFire();
+        } else if (this.type === 'ember') {
+          this._drawEmber();
+        }
+
+        sCtx.restore();
+      }
+
+      _drawFlower() {
+        const n = this.petalCount;
+        const r = this.size;
+        // outer petals
+        for (let i = 0; i < n; i++) {
+          const a = (i / n) * Math.PI * 2;
+          const px = Math.cos(a) * r * 0.55, py = Math.sin(a) * r * 0.55;
+          const grad = sCtx.createRadialGradient(px * 0.4, py * 0.4, 0, px, py, r * 0.52);
+          grad.addColorStop(0, this.colLight);
+          grad.addColorStop(0.4, this.colMain);
+          grad.addColorStop(1, this.colDark + '44');
+          sCtx.save();
+          sCtx.rotate(a);
+          sCtx.beginPath();
+          sCtx.ellipse(0, -r * 0.3, r * 0.22, r * 0.5, 0, 0, Math.PI * 2);
+          sCtx.fillStyle = grad;
+          sCtx.fill();
+          // petal vein
+          sCtx.beginPath();
+          sCtx.moveTo(0, 0);
+          sCtx.lineTo(0, -r * 0.72);
+          sCtx.strokeStyle = this.colDark + '55';
+          sCtx.lineWidth = 0.8;
+          sCtx.stroke();
+          sCtx.restore();
+        }
+        // center stamen
+        const cg = sCtx.createRadialGradient(0, 0, 0, 0, 0, r * 0.22);
+        cg.addColorStop(0, '#FFF9C4');
+        cg.addColorStop(0.5, '#F9CA24');
+        cg.addColorStop(1, '#e17055');
+        sCtx.beginPath();
+        sCtx.arc(0, 0, r * 0.22, 0, Math.PI * 2);
+        sCtx.fillStyle = cg; sCtx.fill();
+      }
+
+      _drawPetal() {
+        // single loose petal drifting
+        const grad = sCtx.createRadialGradient(0, -this.size * 0.2, 0, 0, -this.size * 0.5, this.size * 0.5);
+        grad.addColorStop(0, this.colLight);
+        grad.addColorStop(0.5, this.colMain + 'cc');
+        grad.addColorStop(1, this.colDark + '44');
+        sCtx.beginPath();
+        sCtx.ellipse(0, -this.size * 0.3, this.size * 0.28, this.size * 0.55, 0, 0, Math.PI * 2);
+        sCtx.fillStyle = grad; sCtx.fill();
+      }
+
+      _drawFire() {
+        const r = this.size;
+        // realistic teardrop flame shape
+        for (let layer = 0; layer < 3; layer++) {
+          const scale = 1 - layer * 0.25;
+          const fi = Math.min(this.fireIdx + layer, FIRE_COLORS.length - 1);
+          const grad = sCtx.createRadialGradient(0, r * 0.1 * scale, 0, 0, -r * 0.3 * scale, r * scale);
+          grad.addColorStop(0, '#ffffff');
+          grad.addColorStop(0.15, FIRE_COLORS[Math.max(0, fi - 1)]);
+          grad.addColorStop(0.6, FIRE_COLORS[fi]);
+          grad.addColorStop(1, 'rgba(255,0,0,0)');
+          sCtx.beginPath();
+          sCtx.moveTo(0, r * 0.5 * scale);
+          sCtx.bezierCurveTo(
+            r * 0.4 * scale, r * 0.1 * scale,
+            r * 0.3 * scale, -r * 0.5 * scale,
+            0, -r * scale
+          );
+          sCtx.bezierCurveTo(
+            -r * 0.3 * scale, -r * 0.5 * scale,
+            -r * 0.4 * scale, r * 0.1 * scale,
+            0, r * 0.5 * scale
+          );
+          sCtx.fillStyle = grad;
+          sCtx.fill();
+        }
+      }
+
+      _drawEmber() {
+        const r = this.size;
+        sCtx.beginPath();
+        sCtx.arc(0, 0, r, 0, Math.PI * 2);
+        const g = sCtx.createRadialGradient(0, 0, 0, 0, 0, r);
+        g.addColorStop(0, '#fff');
+        g.addColorStop(0.3, '#FFD700');
+        g.addColorStop(1, 'rgba(255,60,0,0)');
+        sCtx.fillStyle = g; sCtx.fill();
+        // glow halo
+        sCtx.beginPath();
+        sCtx.arc(0, 0, r * 2.5, 0, Math.PI * 2);
+        const g2 = sCtx.createRadialGradient(0, 0, r, 0, 0, r * 2.5);
+        g2.addColorStop(0, 'rgba(255,150,0,0.25)');
+        g2.addColorStop(1, 'rgba(255,60,0,0)');
+        sCtx.fillStyle = g2; sCtx.fill();
+      }
+    }
+
+    // ── TRIGGER SPLASH ───────────────────────────────────────────────
+    function triggerSplash() {
+      const now = Date.now();
+      if (now - lastFistTime < FIST_COOLDOWN) return;
+      lastFistTime = now;
+
+      splashActive = true;
+      splashFading = false;
+      splashParticles = [];
+
+      // Flash
+      flashEl.classList.add('active');
+      setTimeout(() => flashEl.classList.remove('active'), 200);
+
+      // Fist indicator
+      fistEl.classList.add('show');
+      setTimeout(() => fistEl.classList.remove('show'), 1500);
+
+      // Generate 320 splash particles
+      const COUNTS = { flower: 90, petal: 110, fire: 80, ember: 90 };
+      for (const [type, count] of Object.entries(COUNTS)) {
+        for (let i = 0; i < count; i++) splashParticles.push(new SplashParticle(type));
+      }
+
+      // Also burst DOM particles for extra oomph
+      for (let i = 0; i < 12; i++) {
+        setTimeout(() => {
+          const x = Math.random() * W, y = Math.random() * H;
+          createFlame(x, y);
+          if (Math.random() < 0.5) createSmoke(x, y);
+          for (let j = 0; j < 3; j++) createSpark(x, y);
+        }, i * 80);
+      }
+
+      // After 5s, fade out
+      if (splashTimer) clearTimeout(splashTimer);
+      splashTimer = setTimeout(() => { splashFading = true; }, 5000);
+    }
+
+    // ── UPDATE SPLASH ────────────────────────────────────────────────
+    function updateSplash() {
+      if (!splashActive && splashParticles.length === 0) {
+        sCtx.clearRect(0, 0, W, H);
+        return;
+      }
+
+      if (splashFading) {
+        // fade out opacity of entire splash canvas
+        sCtx.globalAlpha = 1;
+        sCtx.clearRect(0, 0, W, H);
+        // decay all particles faster
+        splashParticles.forEach(p => { p.decay *= 1.012; });
+      } else {
+        sCtx.clearRect(0, 0, W, H);
+      }
+
+      sCtx.globalAlpha = 1;
+      splashParticles = splashParticles.filter(p => {
+        const alive = p.update();
+        if (alive) p.draw();
+        return alive;
+      });
+
+      if (splashParticles.length === 0) {
+        splashActive = false;
+        splashFading = false;
+        sCtx.clearRect(0, 0, W, H);
+      }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  PARTICLE SYSTEM
+    // ══════════════════════════════════════════════════════════════════
+    class Particle {
+      constructor(target) {
+        this.target = target;
+        this.x = Math.random() * W; this.y = Math.random() * H;
+        this.vx = (Math.random() - 0.5) * 8; this.vy = (Math.random() - 0.5) * 8;
+        this.size = 1.4 + Math.random() * 1.8;
+        this.alpha = 0.6 + Math.random() * 0.4;
+        this.noise = Math.random() * Math.PI * 2;
+        this.ns = 0.012 + Math.random() * 0.016;
+        this.colorShift = Math.random() < 0.6 ? 0 : (Math.random() < 0.5 ? 1 : 2);
+      }
+      update(hands) {
+        const dx = this.target.x - this.x, dy = this.target.y - this.y;
+        this.vx += dx * 0.055; this.vy += dy * 0.055;
+        this.noise += this.ns;
+        this.vx += Math.cos(this.noise) * 0.28; this.vy += Math.sin(this.noise) * 0.28;
+        for (const hand of hands) {
+          for (let i = 0; i < hand.length; i += 2) {
+            const lm = hand[i]; if (!lm) continue;
+            const hx = (1 - lm.x) * W, hy = lm.y * H;
+            const ddx = this.x - hx, ddy = this.y - hy;
+            const d2 = ddx * ddx + ddy * ddy, R = 150;
+            if (d2 < R * R && d2 > 0) {
+              const dist = Math.sqrt(d2), f = ((R - dist) / R) * 16;
+              this.vx += (ddx / dist) * f; this.vy += (ddy / dist) * f;
+            }
+          }
+        }
+        this.vx *= 0.86; this.vy *= 0.86;
+        this.x += this.vx; this.y += this.vy;
+        this.x = Math.max(0, Math.min(W, this.x));
+        this.y = Math.max(0, Math.min(H, this.y));
+      }
+      draw() {
+        const spd = Math.sqrt(this.vx * this.vx + this.vy * this.vy), fast = spd > 3.5;
+        let r, g, b;
+        if (this.colorShift === 0) { r = 255; g = 107; b = 53; }
+        else if (this.colorShift === 1) { r = 255; g = 45; b = 35; }
+        else { r = 255; g = 180; b = 0; }
+        if (fast) {
+          ctx.beginPath();
+          ctx.moveTo(this.x - this.vx * 2.5, this.y - this.vy * 2.5);
+          ctx.lineTo(this.x, this.y);
+          ctx.strokeStyle = `rgba(${r},${g},${b},${Math.min(this.alpha * 0.45, 0.38)})`;
+          ctx.lineWidth = this.size * 0.6; ctx.stroke();
+        }
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size * (fast ? 1.4 : 1), 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${r},${g},${b},${this.alpha})`; ctx.fill();
+      }
+    }
+
+    function rebuildParticles() {
+      const count = Math.min(1800, Math.max(targetPoints.length || 600, 600));
+      if (!particles.length) {
+        for (let i = 0; i < count; i++)
+          particles.push(new Particle(targetPoints[i % targetPoints.length] || { x: W / 2, y: H / 2 }));
+      } else {
+        while (particles.length > count) particles.pop();
+        while (particles.length < count)
+          particles.push(new Particle(targetPoints[particles.length % targetPoints.length] || { x: W / 2, y: H / 2 }));
+        for (let i = 0; i < particles.length; i++)
+          particles[i].target = targetPoints[i % targetPoints.length] || { x: W / 2, y: H / 2 };
+      }
+      pcEl.textContent = particles.length;
+    }
+
+    // ── WORD SWITCH ───────────────────────────────────────────────────
+    function switchWord(word, btn) {
+      if (transitioning || word === currentWord) return;
+      transitioning = true; currentWord = word;
+      particles.forEach(p => { p.vx += (Math.random() - 0.5) * 20; p.vy += (Math.random() - 0.5) * 20; });
+      setTimeout(() => { buildTargets(word); rebuildParticles(); transitioning = false; }, 350);
+      document.querySelectorAll('.word-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+    }
+
+    // ── HAND SKELETON ─────────────────────────────────────────────────
+    const CONN = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8],
+    [5, 9], [9, 10], [10, 11], [11, 12], [9, 13], [13, 14], [14, 15], [15, 16],
+    [13, 17], [17, 18], [18, 19], [19, 20], [0, 17]];
+
+    function drawHands(hands) {
+      for (const hand of hands) {
+        ctx.lineWidth = 1;
+        for (const [a, b] of CONN) {
+          const la = hand[a], lb = hand[b]; if (!la || !lb) continue;
+          ctx.beginPath();
+          ctx.moveTo((1 - la.x) * W, la.y * H); ctx.lineTo((1 - lb.x) * W, lb.y * H);
+          ctx.strokeStyle = 'rgba(255,107,53,0.3)'; ctx.globalAlpha = 1; ctx.stroke();
+        }
+        [0, 4, 8, 12, 16, 20].forEach(idx => {
+          const lm = hand[idx]; if (!lm) return;
+          const hx = (1 - lm.x) * W, hy = lm.y * H;
+          const r = idx === 0 ? 22 : 13, pulse = 1 + 0.12 * Math.sin(t * 0.07 + idx * 0.9);
+          ctx.beginPath(); ctx.arc(hx, hy, r * pulse + 5, 0, Math.PI * 2);
+          ctx.strokeStyle = idx === 0 ? 'rgba(255,200,0,0.1)' : 'rgba(255,107,53,0.08)';
+          ctx.lineWidth = 7; ctx.stroke();
+          ctx.beginPath(); ctx.arc(hx, hy, r * pulse, 0, Math.PI * 2);
+          ctx.strokeStyle = idx === 0 ? 'rgba(255,180,0,0.9)' : 'rgba(255,107,53,0.8)';
+          ctx.lineWidth = 1.5; ctx.stroke();
+          ctx.beginPath(); ctx.arc(hx, hy, idx === 0 ? 5 : 3, 0, Math.PI * 2);
+          ctx.fillStyle = idx === 0 ? '#FFB300' : '#FF6B35'; ctx.globalAlpha = 1; ctx.fill();
+        });
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // ── AMBIENT ───────────────────────────────────────────────────────
+    const amb = Array.from({ length: 40 }, () => ({
+      x: Math.random(), y: Math.random(),
+      vx: (Math.random() - 0.5) * 0.0007, vy: (Math.random() - 0.5) * 0.0007,
+      r: Math.random() * 1.1 + 0.3, a: Math.random() * 0.07 + 0.02
+    }));
+    function drawAmbient() {
+      for (const p of amb) {
+        p.x = (p.x + p.vx + 1) % 1; p.y = (p.y + p.vy + 1) % 1;
+        ctx.beginPath(); ctx.arc(p.x * W, p.y * H, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,107,53,${p.a})`; ctx.fill();
+      }
+    }
+    function drawScanline() {
+      [[0, 0, 1, 1], [W, 0, -1, 1], [0, H, 1, -1], [W, H, -1, -1]].forEach(([cx, cy, sx, sy]) => {
+        ctx.beginPath();
+        ctx.moveTo(cx + sx * 50, cy); ctx.lineTo(cx, cy); ctx.lineTo(cx, cy + sy * 50);
+        ctx.strokeStyle = 'rgba(255,107,53,0.15)'; ctx.lineWidth = 1.5; ctx.stroke();
+      });
+    }
+
+    // ── FIST DETECTION STATE ─────────────────────────────────────────
+    let fistDetectedFrames = 0;
+    const FIST_CONFIRM_FRAMES = 4; // require N consecutive frames
+
+    // ── RENDER ────────────────────────────────────────────────────────
+    function render() {
+      t++;
+
+      // Draw webcam (dark overlay applied via CSS + canvas)
+      if (video.readyState >= 2) {
+        ctx.save(); ctx.translate(W, 0); ctx.scale(-1, 1);
+        ctx.drawImage(video, 0, 0, W, H);
+        ctx.restore();
+        // Apply dark transparent overlay directly on canvas
+        ctx.fillStyle = 'rgba(0,0,0,0.62)';
+        ctx.fillRect(0, 0, W, H);
+      } else {
+        ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+      }
+
+      // Vignette
+      const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.08, W / 2, H / 2, H * 0.88);
+      vg.addColorStop(0, 'rgba(0,0,0,0.0)');
+      vg.addColorStop(0.55, 'rgba(0,0,0,0.28)');
+      vg.addColorStop(1, 'rgba(0,0,0,0.78)');
+      ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+
+      // Motion trail
+      ctx.fillStyle = 'rgba(0,0,0,0.06)'; ctx.fillRect(0, 0, W, H);
+
+      drawAmbient(); drawScanline();
+
+      // Hand cursor tracking
+      if (handLandmarks.length > 0) {
+        const finger = handLandmarks[0][8];
+        if (finger) {
+          const hx = (1 - finger.x) * W, hy = finger.y * H;
+          cursor.style.left = hx + 'px'; cursor.style.top = hy + 'px';
+          mouseX = hx; mouseY = hy;
+          for (let i = 0; i < 3; i++) createFlame(hx, hy);
+          if (Math.random() < 0.4) createSmoke(hx, hy);
+          if (Math.random() < 0.3) createSpark(hx, hy);
+        }
+      }
+
+      // ── FIST detection ──────────────────────────────────────────────
+      let anyFist = false;
+      for (const hand of handLandmarks) {
+        if (isFist(hand)) { anyFist = true; break; }
+      }
+      if (anyFist) {
+        fistDetectedFrames++;
+        if (fistDetectedFrames === FIST_CONFIRM_FRAMES) {
+          triggerSplash();
+        }
+      } else {
+        fistDetectedFrames = 0;
+      }
+
+      ctx.globalAlpha = 1;
+      for (const p of particles) { p.update(handLandmarks); p.draw(); }
+      if (handLandmarks.length > 0) drawHands(handLandmarks);
+      ctx.globalAlpha = 1;
+
+      // ── Splash canvas update ─────────────────────────────────────────
+      updateSplash();
+
+      pcEl.textContent = particles.length;
+      hcEl.textContent = handLandmarks.length;
+
+      requestAnimationFrame(render);
+    }
+
+    // ── CAMERA ────────────────────────────────────────────────────────
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false
+        });
+        video.srcObject = stream;
+        video.setAttribute('playsinline', ''); video.setAttribute('autoplay', '');
+        video.muted = true; await video.play();
+        document.getElementById('status-text').textContent = '✊ MAKE A FIST TO SPLASH!';
+        document.getElementById('status-sub').textContent = 'Or move hands to control particles';
+        setTimeout(() => { statusDiv.style.transition = 'opacity 2s'; statusDiv.style.opacity = '0'; }, 3000);
+        return true;
+      } catch (e) {
+        document.getElementById('status-text').textContent = '⚠️ Camera Access Needed';
+        document.getElementById('status-sub').textContent = 'Allow camera access to use gestures';
+        return false;
+      }
+    }
+
+    // ── MEDIAPIPE ─────────────────────────────────────────────────────
+    function initMP() {
+      mpHands = new Hands({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
+      mpHands.setOptions({
+        maxNumHands: 2, modelComplexity: 0,
+        minDetectionConfidence: 0.65, minTrackingConfidence: 0.55
+      });
+      mpHands.onResults(r => {
+        handLandmarks = r.multiHandLandmarks || [];
+        if (handLandmarks.length > 0) {
+          lastHandTime = Date.now();
+          if (statusDiv.style.opacity !== '0') {
+            statusDiv.style.transition = 'opacity 0.6s'; statusDiv.style.opacity = '0';
+          }
+        }
+      });
+      mpHands.initialize().then(() => { mpReady = true; pumpFrames(); })
+        .catch(e => { console.warn('MediaPipe init failed:', e); mpReady = false; });
+    }
+
+    let pumping = false;
+    async function pumpFrames() {
+      if (!mpReady || pumping) return;
+      pumping = true;
+      const loop = async () => {
+        if (video.readyState >= 2 && !video.paused) {
+          try { await mpHands.send({ image: video }); } catch (_) { }
+        }
+        setTimeout(loop, 50);
+      };
+      loop();
+    }
+
+    // ── AUTO CYCLE ────────────────────────────────────────────────────
+    const WORDS = ['KRISHNA', 'CODE', 'HIRED', 'BUILD', 'BENGALURU', 'AI'];
+    let wIdx = 0;
+    setInterval(() => {
+      if (Date.now() - lastHandTime < 5000) return;
+      wIdx = (wIdx + 1) % WORDS.length;
+      const btns = [...document.querySelectorAll('.word-btn')];
+      switchWord(WORDS[wIdx], btns[wIdx]);
+    }, 4000);
+
+    // ── CURSOR ────────────────────────────────────────────────────────
+    const cursor = document.getElementById('cursor');
+    const ring = document.getElementById('cursor-ring');
+    let mouseX = 0, mouseY = 0, ringX = 0, ringY = 0;
+
+    document.addEventListener('mousemove', e => {
+      mouseX = e.clientX; mouseY = e.clientY;
+      cursor.style.left = mouseX + 'px'; cursor.style.top = mouseY + 'px';
+      for (let i = 0; i < 3; i++) createFlame(mouseX, mouseY);
+      if (Math.random() < 0.4) createSmoke(mouseX, mouseY);
+      if (Math.random() < 0.3) createSpark(mouseX, mouseY);
+    });
+
+    function animateCursor() {
+      ringX += (mouseX - ringX) * 0.15; ringY += (mouseY - ringY) * 0.15;
+      ring.style.left = ringX + 'px'; ring.style.top = ringY + 'px';
+      requestAnimationFrame(animateCursor);
+    }
+    animateCursor();
+
+    // ── BOOT ──────────────────────────────────────────────────────────
+    resize();
+    render();
+    startCamera().then(ok => { if (ok) initMP(); });
+  </script>
+</body>
+
+</html>
